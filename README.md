@@ -87,6 +87,143 @@ Credentials belong in the integration, **never in dashboard YAML**. Client acces
 and firmware actions require suitable UniFi permissions; monitoring can use
 more restricted access.
 
+## Preparing and extending standard UniFi data
+
+Installing this dashboard does **not** enable sensors or collect additional data.
+Start with the official integration, enable the metrics it already offers, and
+only derive extra sensors when the underlying data actually exists.
+
+### 1. Configure the official integration
+
+Follow the [official UniFi Network setup guide](https://www.home-assistant.io/integrations/unifi/).
+Use a **local UniFi account**, not a Ubiquiti cloud/SSO account. Select the correct
+controller and site. Read-only permissions may be sufficient for monitoring;
+client blocking and firmware actions need the appropriate management permissions.
+Do not grant extra permissions merely to make a missing hardware metric appear.
+
+Under **Settings > Devices & services > UniFi Network > Configure** (wording and
+option pages vary by HA version), review:
+
+- **Track network clients** for client presence and the offline list.
+- **Include wired network clients** if LAN clients should be tracked too.
+- **Select SSIDs to track wireless clients on**: include the main/guest networks
+  you intend to monitor, or leave the selection empty to track all SSIDs.
+- **Track network devices** only if you also want presence trackers for gateways,
+  switches, or APs. These are not the same as client trackers.
+- **Create entities from network clients**, where offered, to select specific
+  clients for supported entities such as access controls.
+- **Bandwidth usage sensors for network clients** only when you need per-client
+  traffic. Those are **not** the WAN-port sensors used by this dashboard.
+
+Tracker presence follows the integration's detection delay. Private/randomized
+MAC addresses, SSID filtering, and disabled tracking can prevent a client from
+being represented reliably. Review those options before deriving client totals.
+
+### 2. Enable existing diagnostic entities
+
+Open **Settings > Devices & services > Entities**, filter by **UniFi Network**,
+and include disabled entities. Open the relevant entity, enable it if available,
+and wait for integration updates. Confirm its real state under
+**Developer tools > States** before copying its ID into the dashboard.
+Enable only the metrics you use; enabling every client/port sensor can create
+unnecessary history and load.
+
+| Dashboard data | First place to look | If not available |
+| --- | --- | --- |
+| CPU / memory | Gateway device's CPU and memory utilization sensors | Check hardware/firmware support. Neither can be reconstructed from client presence or uptime. |
+| CPU temperature | Gateway's temperature/individual temperature sensors; some are disabled by default | Use only an actually reported temperature. General device temperature is not necessarily CPU temperature; rename the card if using it. |
+| Router uptime | UniFi network device's uptime sensor | Do not enable client uptime and assume it is the router's uptime. |
+| WAN TX / RX | Actual WAN port's **Port Bandwidth** sensors; these can be disabled by default | Port metrics depend on the controller/device exposing them. Client bandwidth or link speed is not a substitute. |
+| Main / guest Wi-Fi clients | **WLAN clients** sensors for the corresponding SSIDs | Check that the WLAN exists in the selected site. Otherwise use explicitly selected client trackers as a limited count, below. |
+| LAN / overall Wi-Fi clients | Relevant device-client counters if their scope matches; otherwise selected client trackers | A device's client count is not guaranteed to be a site-wide LAN/Wi-Fi total. Do not sum overlapping gateway/AP counts. |
+| Disconnected main-Wi-Fi clients | A matching numeric sensor, if your installation has one | Not guaranteed by the standard integration. You can count offline members of a manually maintained client list, not recover an authoritative all-client total. |
+| Client access / firmware | Client access switches and router firmware update entity | Verify account permissions and controller support. Templates cannot add a missing control API. |
+
+The dashboard's example entity IDs are **not a list of entities guaranteed to
+exist** in every standard installation. In particular, separate LAN/Wi-Fi totals
+and disconnected-client counts may require derived sensors or removing those
+cards. Renaming an entity cannot change its meaning or create missing telemetry.
+
+### 3. Add a derived count only when needed
+
+For a missing LAN/Wi-Fi count, Home Assistant's built-in
+[Template integration](https://www.home-assistant.io/integrations/template/) can
+count a **selected inventory of client trackers**. This needs no custom
+integration. Prefer a native WLAN count when available: a manually selected
+inventory will not automatically include new clients.
+
+For a visual setup, open **Settings > Devices & services > Helpers > Create
+helper > Template > Sensor**. Give it a descriptive name, leave its unit and
+device class unset, and choose state class **Measurement** if that option is
+available. Paste the following into its **State template** after replacing the
+three IDs with your own client trackers:
+
+```jinja
+{% set sources = [
+  'device_tracker.client_1',
+  'device_tracker.client_2',
+  'device_tracker.client_3'
+] %}
+{% set clients = expand(sources) | list %}
+{% set valid = clients | selectattr('state', 'in', ['home', 'not_home']) | list %}
+{% if clients | count == sources | count and valid | count == sources | count %}
+  {{ clients | selectattr('state', 'eq', 'home') | list | count }}
+{% else %}
+  {{ none }}
+{% endif %}
+```
+
+This returns a real zero only when **all** selected trackers exist, have valid
+states, and none is connected. Missing, unknown, or unavailable trackers yield
+no numeric reading, rather than a misleading zero. Where the helper exposes an
+**Availability template**, paste this there too, using the same tracker IDs:
+
+```jinja
+{% set sources = [
+  'device_tracker.client_1',
+  'device_tracker.client_2',
+  'device_tracker.client_3'
+] %}
+{% set clients = expand(sources) | list %}
+{% set valid = clients | selectattr('state', 'in', ['home', 'not_home']) | list %}
+{{ clients | count == sources | count and valid | count == sources | count }}
+```
+
+Without an availability field, the state template still avoids a fabricated
+count and can show `unknown` while a source is invalid.
+
+- Select only wired client trackers for a LAN inventory, or only wireless
+  clients for a Wi-Fi inventory. Do not include the router/AP device trackers.
+- For main/guest Wi-Fi inventories, select clients belonging to that network.
+  This is manually maintained membership, not dynamic SSID discovery; a client
+  moving between SSIDs will not automatically move to a different inventory.
+- For a disconnected inventory count, change the **final count's** `'home'`
+  to `'not_home'`, but keep both states in the validation list.
+- Add/remove complete IDs to change the inventory. Keep it nonempty and avoid
+  duplicate IDs. An absent tracker is a setup/source problem, not an offline device.
+- Save, find the helper's actual `sensor.*` ID, and replace the corresponding
+  dashboard example ID **at every occurrence**. Rename the displayed card to
+  something like “Selected LAN clients” so its limited scope is clear.
+
+The helper does not create trackers, query the controller, or infer CPU,
+temperature, or traffic. Never convert unavailable telemetry into zero using
+`float(0)` simply to make a chart render.
+
+### 4. Build history and verify the result
+
+After enabling a sensor or creating a helper, ensure Recorder includes it.
+New entities only accumulate history **from that point onward**; this dashboard
+cannot reconstruct the previous 24 hours/seven days. Leave time for data to
+appear, then compare current values with the controller and test a selected
+client disconnect/reconnect.
+
+If a reported metric needs a different unit, use a deliberately configured
+persistent conversion sensor with source-availability checks; changing `unit:`
+or the label does not convert readings. If the controller does not expose CPU,
+temperature, or WAN-port telemetry at all, use another verified data source or
+remove the affected card. This repository does not bundle controller API scraping,
+additional credentials, or an unofficial telemetry integration.
+
 ## Installation
 
 1. Back up your existing dashboard using its **Raw configuration editor**.
@@ -97,7 +234,8 @@ more restricted access.
    URL/version consistent with the dashboard resource to avoid duplicate loading.
 3. Create and open a new empty dashboard under **Settings > Dashboards**.
    Take control first if the dashboard is automatically managed.
-4. Copy [dashboard.yaml](./dashboard.yaml) and replace the entities listed below.
+4. [Prepare the UniFi data](#preparing-and-extending-standard-unifi-data), then
+   copy [dashboard.yaml](./dashboard.yaml) and replace the entities listed below.
    Find your IDs under **Developer tools > States** or
    **Settings > Devices & services > Entities**. Also change the header's
    `UniFi Dream Router` text if you use a different router.
@@ -304,8 +442,9 @@ native. Bubble Card is removed; card-mod supplies presentation only.
 Duplicate uptime rows and the misleading “Access Points” counter label are gone.
 The original “disconnected devices” filter did not test for an offline state;
 the new lists explicitly require `not_home`. Private IDs, external logos, and
-theme-specific dependencies are not published. No template sensors, helpers,
-or automations are required.
+theme-specific dependencies are not published. No helpers or automations are
+required when suitable source entities already exist. The optional derived-count
+recipe above uses built-in Template helpers for installations missing those counts.
 
 ## Validation
 
