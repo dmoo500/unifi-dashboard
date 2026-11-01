@@ -1,207 +1,251 @@
-# UniFi Dashboard für Home Assistant
+# UniFi Dashboard for Home Assistant
 
-Ein übersichtliches UniFi-Dashboard mit **ausschließlich eingebauten Karten** in
-der Basis. Kein HACS, kein `card-mod`, keine Theme-Abhängigkeit. Die native
-Sections-Ansicht ordnet die Karten auf Desktop und Smartphone an.
+A UniFi-inspired network overview using **native Home Assistant cards** and
+**card-mod for styling**. A wide controller header, a compact traffic row, and
+aligned device panels bring back the structure of the original dashboard without
+Bubble Card, Mini Graph Card, Button Card, Stack in Card, or Multiple Entity Row.
 
-Wer mehr braucht, kann **zwei unabhängige optionale Erweiterungen** hinzufügen:
-eine automatisch zusammengestellte Offline-Client-Liste und eine Netzwerktopologie.
+All dashboard labels and documentation are in English. Home Assistant still
+localizes built-in states and dialogs according to your profile language.
 
-## Was enthalten ist
+## Design
 
-- CPU, RAM und CPU-Temperatur mit nativen Gauge-Karten.
-- Laufzeit und Firmware-Status; Firmware-Details öffnen sich per Antippen.
-- Aktuelle LAN-/WLAN-Clientzahlen und sieben Tage Verlauf.
-- TX-/RX-Datenrate des WAN-Ports und Clientzahlen je WLAN.
-- Einzelne Schalter für den Netzwerkzugriff von Clients, ohne Sammelschalter.
-- Native Offline-Liste für explizit ausgewählte Client-Tracker.
+On a wide screen:
 
-Dies ist eine **Dashboard-Vorlage**, keine Integration und kein HACS-Paket.
-Die Beispiel-Entitäten müssen an die eigene Installation angepasst werden.
+```text
+┌────────────────────────────────────────────────────────────────────┐
+│ UniFi Network                  Dream Router: CPU / Memory / Temp    │
+├──────────────────────┬──────────┬──────────┬──────────┬─────────────┤
+│ WAN traffic (TX/RX)  │ LAN      │ Wi-Fi    │ Main     │ Guest       │
+├──────────────────────┼──────────┴──────────┼──────────┴─────────────┤
+│ Client access        │ LAN details        │ Wi-Fi details          │
+├──────────────────────┼────────────────────┴────────────────────────┤
+│ Firmware             │ Offline clients                             │
+└──────────────────────┴─────────────────────────────────────────────┘
+```
 
-## Voraussetzungen
+This is a layout guide, **not a screenshot of a tested live installation**.
+The header spans the dashboard, WAN traffic gets twice the width of a client
+graph, and the offline list occupies two device columns. CSS container queries
+adapt to the available card width, including when the Home Assistant sidebar is
+open: the traffic row becomes two columns below 900px and one below 450px;
+the header and device rows stack below 700px.
 
-- Eine aktuelle stabile Home-Assistant-Version mit Sections-, Heading-, Tile-
-  und Entity-Filter-Karten samt `conditions`-Unterstützung.
-- Eingerichtete [UniFi-Network-Integration](https://www.home-assistant.io/integrations/unifi/).
-- Die benötigten Sensoren, Tracker, Switches und Update-Entitäten. Manche sind
-  standardmäßig deaktiviert oder nur für bestimmte Hardware verfügbar.
-- Recorder/History für die Verlaufskarten. Die Sensoren dürfen nicht vom
-  Recorder ausgeschlossen sein. Sieben Tage Historie müssen vorhanden sein;
-  ältere Daten können bei geeigneten Sensoren aus Langzeitstatistiken stammen.
+Cards use theme-provided backgrounds/text, subtle borders, 8px corners, blue
+and orange graph accents, and no forced dark theme. There are no external images.
 
-Zugangsdaten gehören ausschließlich in die Integration, **nicht** ins Dashboard.
-Schreibaktionen wie Client-Zugriff und Firmware-Updates benötigen passende
-UniFi-Berechtigungen; reine Anzeige kann mit weniger Rechten auskommen.
+**Native design limits:** router values use semicircular gauges, not the original
+Bubble progress bars. Native sensor graphs show a current value and history;
+the WAN graph retains native axes and legend. These are not pixel-identical to
+Mini Graph Card. Styling does not replace the charts or hide missing data.
+
+## Features
+
+- CPU, memory, and CPU temperature with colored native gauges.
+- Current LAN/Wi-Fi/main/guest client counts with seven-day native sensor graphs.
+- Seven-day TX/RX history for the WAN port.
+- Router uptime, Wi-Fi details, and individual client-access switches.
+- Firmware status; tapping opens details rather than installing immediately.
+- A native offline list for explicitly selected client trackers.
+- Two independent optional additions: automatic offline discovery and topology.
+
+This is a **dashboard template**, not an integration or a HACS package.
+Replace the example entity IDs before using it.
+
+## Requirements
+
+- A current stable Home Assistant release with Sections views, native sensor,
+  gauge, tile, and entity-filter cards supporting `conditions`.
+- The official [UniFi Network integration](https://www.home-assistant.io/integrations/unifi/).
+- [card-mod 4](https://github.com/thomasloven/lovelace-card-mod), installed through
+  HACS or manually according to its instructions. Its support for styling native
+  grid cards without `ha-card` is needed here. Choose a compatible Home Assistant/
+  card-mod version pair from the project's compatibility table.
+- A modern browser or Companion App WebView supporting CSS container queries.
+- The required sensors, trackers, switches, and update entity. Some are disabled
+  by default or only available on certain hardware.
+- Recorder/History with at least seven days retained for these sensors. Do not
+  exclude them from Recorder. Native sensor graphs require recorded history;
+  the WAN history graph may backfill older data from suitable long-term statistics.
+
+Only **one frontend dependency** is needed for the base design: card-mod.
+Without it the native cards still work, but the responsive styling, wide WAN/
+offline cards, and combined header are lost. Remove all `card_mod` blocks if you
+want an entirely dependency-free version; adjust native grid columns for your
+screen yourself.
+
+Credentials belong in the integration, **never in dashboard YAML**. Client access
+and firmware actions require suitable UniFi permissions; monitoring can use
+more restricted access.
 
 ## Installation
 
-1. Bestehendes Dashboard sichern: im Menü den **Rohkonfigurationseditor** öffnen
-   und die aktuelle YAML-Konfiguration lokal speichern.
-2. Unter **Einstellungen → Dashboards** ein neues leeres Dashboard anlegen und
-   öffnen. Bei automatisch verwalteten Dashboards gegebenenfalls erst die
-   Kontrolle übernehmen.
-3. [dashboard.yaml](./dashboard.yaml) kopieren und die unten genannten Entitäten
-   ersetzen. Deine tatsächlichen IDs findest du unter **Entwicklerwerkzeuge →
-   Zustände** bzw. **Einstellungen → Geräte & Dienste → Entitäten**.
-4. Die gesamte angepasste Datei in den **Rohkonfigurationseditor des neuen
-   Dashboards** einfügen und speichern. Nicht in den Editor einer einzelnen Karte
-   und nicht direkt in `configuration.yaml` einfügen.
-5. Prüfen, ob alle Messwerte und Einheiten stimmen. Nicht vorhandene Karten oder
-   Zeilen entfernen statt künstliche Nullwerte einzutragen.
-6. Erst nach erfolgreicher Prüfung das alte Dashboard ablösen. Installierte
-   Custom Cards nur entfernen, wenn kein anderes Dashboard sie mehr verwendet.
+1. Back up your existing dashboard using its **Raw configuration editor**.
+2. Install card-mod. Under **Settings > Dashboards > Resources**, verify that
+   its JavaScript module is registered, following the project's instructions.
+   HACS normally manages this resource. Reload the browser after installation.
+   If using `frontend.extra_module_url`, follow card-mod's guidance and keep its
+   URL/version consistent with the dashboard resource to avoid duplicate loading.
+3. Create and open a new empty dashboard under **Settings > Dashboards**.
+   Take control first if the dashboard is automatically managed.
+4. Copy [dashboard.yaml](./dashboard.yaml) and replace the entities listed below.
+   Find your IDs under **Developer tools > States** or
+   **Settings > Devices & services > Entities**. Also change the header's
+   `UniFi Dream Router` text if you use a different router.
+5. Paste the **whole file** into the new dashboard's **Raw configuration editor**
+   and save. Do not paste it into a single-card editor or `configuration.yaml`.
+6. Check readings, units, layout, and actions. Remove unavailable cards/rows rather
+   than supplying artificial zero values.
+7. Replace the old dashboard only after checking the new one. Uninstall old custom
+   cards only if no other dashboards still use them.
 
-Persönliche Varianten kannst du im ignorierten Verzeichnis `local/` oder als
-`dashboard.local.yaml` ablegen. Diese Dateien werden nicht mit Git veröffentlicht.
-Vor jedem Upload trotzdem die Änderungen auf private Daten prüfen.
+Keep personal versions in ignored `local/` or `dashboard.local.yaml`.
+Review every Git upload for private data even when using ignored local files.
 
-### Entitäten anpassen
+### Entity mapping
 
-Die Router-IDs folgen dem ursprünglichen Dream-Router-Beispiel; auch bei einem
-Dream Router können sie anders heißen. WLANs und Clients sind neutrale Platzhalter.
-Jede ID **an allen Fundstellen** ersetzen.
+Router IDs follow the original Dream Router example, but your IDs may differ
+even with the same hardware. Wi-Fi networks and clients use neutral placeholders.
+Replace each ID **at every occurrence**.
 
-| Beispiel-Entität | Benötigter Wert |
+| Example entity | Required value |
 | --- | --- |
-| `sensor.dream_router_cpu_utilization` | CPU-Auslastung in Prozent |
-| `sensor.dream_router_memory_utilization` | RAM-Auslastung in Prozent |
-| `sensor.dream_router_dream_router_cpu_temperature` | CPU-Temperatur in °C |
-| `sensor.dream_router_uptime` | Laufzeit oder Startzeitpunkt, je nach Integration |
-| `update.dream_router` | Firmware-Update-Entität |
-| `sensor.dream_router_connected_lan_clients` | Anzahl verbundener LAN-Clients |
-| `sensor.dream_router_wlan_users` | Anzahl verbundener WLAN-Clients |
-| `sensor.dream_router_port_5_tx` | TX-Datenrate des tatsächlichen WAN-Ports |
-| `sensor.dream_router_port_5_rx` | RX-Datenrate des tatsächlichen WAN-Ports |
-| `sensor.wlan_main_clients` | Clientzahl des Haupt-WLANs |
-| `sensor.wlan_guest_clients` | Clientzahl des Gast-WLANs |
-| `sensor.wlan_main_disconnected_clients` | Getrennte Clients des Haupt-WLANs |
-| `switch.client_1`, `switch.client_2`, `switch.client_3` | UniFi-Client-Zugriffsschalter |
-| `device_tracker.client_1`, `device_tracker.client_2`, `device_tracker.client_3` | UniFi-Client-Tracker |
+| `sensor.dream_router_cpu_utilization` | CPU utilization in percent |
+| `sensor.dream_router_memory_utilization` | Memory utilization in percent |
+| `sensor.dream_router_dream_router_cpu_temperature` | CPU temperature in °C |
+| `sensor.dream_router_uptime` | Uptime or startup timestamp, depending on the integration |
+| `update.dream_router` | Firmware update entity |
+| `sensor.dream_router_connected_lan_clients` | Connected LAN client count |
+| `sensor.dream_router_wlan_users` | Connected Wi-Fi client count |
+| `sensor.dream_router_port_5_tx` | TX rate of the actual WAN port |
+| `sensor.dream_router_port_5_rx` | RX rate of the actual WAN port |
+| `sensor.wlan_main_clients` | Main Wi-Fi client count |
+| `sensor.wlan_guest_clients` | Guest Wi-Fi client count |
+| `sensor.wlan_main_disconnected_clients` | Main Wi-Fi disconnected client count |
+| `switch.client_1`, `switch.client_2`, `switch.client_3` | UniFi client-access switches |
+| `device_tracker.client_1`, `device_tracker.client_2`, `device_tracker.client_3` | UniFi client trackers |
 
-**Wichtige Bedeutungen:**
+### Important semantics
 
-- Port 5 ist nur ein Beispiel. TX/RX beziehen sich auf den Port des Routers;
-  Download/Upload nicht ungeprüft aus diesen Namen ableiten. Es sind Datenraten,
-  kein Internet-Speedtest. Beide Sensoren sollten dieselbe Einheit haben.
-- Die Temperatur-Gauge geht von °C aus und überschreibt die Sensor-Einheit nicht.
-  Bei °F den Bereich und die Schwellen entsprechend umrechnen.
-- Die Gauge-Farben sind Beispielwerte aus dem bisherigen Dashboard: grün ab 0,
-  gelb ab 31, rot ab 61. Die native Gauge verwendet inklusive Untergrenzen;
-  die bisherige strikte Bedingung `above: 60` ist damit für ganzzahlige Werte
-  abgebildet. Schwellen insbesondere für Temperaturen an die Hardware anpassen.
-- Der WLAN-Sensor zählt **Clients**, nicht Access Points. Die irreführende
-  Bezeichnung „Access Points“ des alten Dashboards entfällt.
-- Die offiziellen UniFi-Client-Zugriffsschalter bedeuten üblicherweise **an =
-  Zugriff erlaubt**, **aus = blockiert**. Vor dem ersten Schalten kontrollieren;
-  nicht mit PoE-, WLAN- oder Firewall-Schaltern verwechseln.
-- `not_home` bedeutet beim UniFi-Tracker „nicht als verbunden erkannt“; nicht
-  zwingend, dass ein Gerät defekt oder eine Person abwesend ist. Die Erkennung
-  kann verzögert sein. `unknown` und `unavailable` werden nicht als offline
-  ausgegeben. „Zuletzt geändert“ ist der HA-Zustandswechsel, nicht unbedingt
-  der exakte Trennungszeitpunkt.
-- Die native Offline-Liste bleibt bei null Treffern als leere Karte sichtbar.
-  Das ist **keine** Bestätigung, dass alle Geräte erreichbar sind: fehlende oder
-  nicht verfügbare Tracker unter Entwicklerwerkzeuge prüfen.
+- Port 5 is an example. TX/RX are from the router port's perspective; do not
+  assume download/upload direction without checking. These are data rates,
+  **not an internet speed test**. Use sensors with matching units.
+- The temperature gauge assumes °C without overriding the entity's unit.
+  Convert its range and thresholds if your entity uses °F.
+- Gauge colors use the original example's thresholds: green from 0, yellow from
+  31, red from 61. Native gauges use inclusive lower bounds, approximating the
+  old strict `above: 60` condition for integer values. Customize thresholds,
+  especially temperature, for your hardware.
+- Wi-Fi counters count **clients**, not access points.
+- Official UniFi client-access switches normally mean **on = access allowed**,
+  **off = blocked**. Verify before switching; do not substitute PoE, Wi-Fi, or
+  firewall switches. The dashboard deliberately has no bulk toggle.
+- A UniFi tracker in `not_home` is not detected as connected; this does not prove
+  device failure or a person's absence. Detection can be delayed. Randomized
+  MAC addresses and sleeping clients can affect tracking.
+- `unknown` and `unavailable` are **not** classified as offline. “Last changed”
+  is the HA state change, not necessarily the exact disconnection time.
+- The offline card stays visible when empty. An empty list **does not prove**
+  every device is reachable: check missing or unavailable trackers separately.
 
-## Optionale Erweiterungen
+## Optional additions
 
-Die Basis funktioniert ohne diese Erweiterungen. Jede Datei unten enthält
-**genau eine Karte**, kein vollständiges Dashboard. Im Bearbeitungsmodus eine
-manuelle Karte anlegen und deren YAML einfügen.
+Each file below contains **one card**, not a whole dashboard.
+Both additions are independent of each other and are not required by the base.
 
-### Automatische Offline-Client-Liste
+### Automatic offline clients
 
-1. [Auto Entities](https://github.com/thomasloven/lovelace-auto-entities) über HACS
-   installieren und die Dashboard-Ressource gemäß dessen Anleitung laden.
-2. Die native Entity-Filter-Karte im Abschnitt „Offline-Clients“ durch
-   [optional/auto-offline-clients.yaml](./optional/auto-offline-clients.yaml)
-   ersetzen. Die Heading-Karte kann bleiben.
+1. Install [Auto Entities](https://github.com/thomasloven/lovelace-auto-entities)
+   through HACS and load its resource according to its instructions.
+2. In the raw dashboard YAML, replace the `entity-filter` card inside the last
+   grid's `cards` list with [optional/auto-offline-clients.yaml](./optional/auto-offline-clients.yaml),
+   keeping the same indentation. This preserves its wide offline-list position.
+   Alternatively add the snippet as a standalone manual card.
 
-Der Filter findet `device_tracker` der offiziellen `unifi`-Integration mit
-`source_type: router` und Zustand `not_home`. Er nimmt nicht versehentlich
-Tracker anderer Router-Integrationen auf. Bei mehreren UniFi-Integrationen
-umfasst er alle; bei Bedarf anhand eigener Attribute weiter eingrenzen.
-Falls nichts erscheint, Tracker-Zustände, Attribute und Integrationszuordnung
-prüfen. Auch diese Liste meldet unbekannte oder nicht verfügbare Geräte nicht
-als offline.
+The filter selects `device_tracker` entities from the official `unifi` integration
+with `source_type: router` and state `not_home`. It does not pick up unrelated
+router integrations. With multiple UniFi integration entries it includes all of
+them; narrow it using your own attributes if needed. If nothing appears, check
+states, attributes, and integration membership. Unknown/unavailable devices are
+not included here either.
 
-Die alten privaten WLAN-/IP-Ausschlüsse werden nicht mitgeliefert. Bei Bedarf
-unter `filter.exclude` eigene Regeln ergänzen, beispielsweise:
+Private Wi-Fi/IP exclusions are not bundled. Add your own under `filter.exclude`
+if needed, for example:
 
 ```yaml
   exclude:
     - attributes:
-        essid: DEIN_GAST_WLAN
+        essid: YOUR_GUEST_WIFI
     - attributes:
         ip: "192.0.2.*"
 ```
 
-Das IP-Muster ist ein Dokumentationsbeispiel, kein realer lokaler Netzbereich.
-Tracker ohne entsprechendes Attribut werden dadurch nicht ausgeschlossen.
+The IP pattern is a documentation example, not a real local subnet.
+Trackers without those attributes are not excluded by those rules.
 
-### Netzwerktopologie
+### Network topology
 
-1. Die separate Integration
-   [UniFi Network Map](https://github.com/merlijntishauser/unifi-network-maps-ha)
-   nach deren Anleitung installieren und konfigurieren. Nur die offizielle
-   UniFi-Integration oder Auto Entities reichen hierfür nicht aus.
-2. [optional/network-map.yaml](./optional/network-map.yaml) als manuelle Karte
-   hinzufügen, am besten in einen eigenen Abschnitt.
-3. `REPLACE_WITH_NETWORK_MAP_ENTRY_ID` durch die **Entry-ID der
-   Network-Map-Integration** ersetzen, nicht durch die der offiziellen
-   UniFi-Integration. Laut Anbieter findest du sie im Attribut `entry_id`
-   von `sensor.unifi_network_map_status`; alternativ den visuellen Karteneditor
-   der Erweiterung verwenden.
-4. Die Kartenhöhe von 600 Pixeln bei Bedarf anpassen.
+1. Install and configure the separate
+   [UniFi Network Map integration](https://github.com/merlijntishauser/unifi-network-maps-ha).
+   The official UniFi integration and Auto Entities alone cannot render topology.
+2. Add [optional/network-map.yaml](./optional/network-map.yaml) as a manual card
+   in a new section beneath the overview. Expand that section/card if desired.
+3. Replace `REPLACE_WITH_NETWORK_MAP_ENTRY_ID` with the **Network Map integration's
+   entry ID**, not the official UniFi integration's ID. The provider documents
+   the `entry_id` attribute on `sensor.unifi_network_map_status`; alternatively
+   select the integration through its visual card editor.
+4. Adjust the 600px card height if needed.
 
-Es gibt keinen gleichwertigen nativen Ersatz für diese Netzwerktopologie.
-Die optionale Karte verwendet ihre Standarddarstellung statt erzwungener
-Themes. Updates und Kompatibilität dieser Erweiterungen liegen bei deren
-jeweiligen Projekten; sie sind nicht Bestandteil dieses Repositories.
+There is no equivalent native topology card. The optional map uses its default
+appearance rather than forcing a theme. These third-party projects handle their
+own updates and compatibility; their code is not bundled here.
 
-## Unterschiede zum bisherigen Dashboard
+## Changes from the original
 
-Die mehrfach verschachtelten Stacks, Bubble-/Button-/Mini-Graph-Karten,
-Multiple Entity Row, externes Logo und CSS-Anpassungen entfallen.
-Native Verlaufskarten behalten den Zeitraum von 168 Stunden bei, sehen aber
-anders aus als Mini Graph Card. Doppelte Laufzeitzeilen entfallen.
+The screenshot's broad header, traffic row, three-column device panels, and wide
+offline list guide this layout. Native grids and one native vertical stack replace
+the repeated custom stacks. Native gauges and sensor/history graphs replace
+Bubble Card and Mini Graph Card; card-mod supplies presentation only.
 
-Die alte „disconnected devices“-Karte hatte keinen Offline-Zustandsfilter.
-Die neue Liste zeigt tatsächlich nur `not_home`. Die automatische Auswahl
-und Topologie bleiben bewusst getrennte, optionale Custom Cards.
-Es werden keine Template-Sensoren, Automationen oder zusätzlichen Helfer benötigt.
+Duplicate uptime rows and the misleading “Access Points” counter label are gone.
+The original “disconnected devices” filter did not test for an offline state;
+the new lists explicitly require `not_home`. Private IDs, external logos, and
+theme-specific dependencies are not published. No template sensors, helpers,
+or automations are required.
 
-## Prüfung
+## Validation
 
-Lokal aus dem Repository-Verzeichnis:
+From the repository directory:
 
 ```sh
 ruby tests/validate.rb
 ```
 
-Die Prüfung verwendet nur Rubys Standardbibliothek. Sie prüft YAML-Syntax,
-doppelte Schlüssel, native Kartentypen der Basis, die dokumentierten Entitäten,
-Gauge-Schwellen, sieben Tage Verlauf und die optionalen Filter. GitHub Actions
-führt dieselbe Prüfung aus.
+This uses Ruby's standard library to check YAML syntax, duplicate keys, native
+card types, the full-width layout and responsive-style rules, entity documentation,
+gauge thresholds, seven-day graphs, safe firmware actions, and optional filters.
+GitHub Actions runs the same checks.
 
-Das ist **kein Home-Assistant-Laufzeit- oder visueller Test**. Ohne Verbindung
-zu einer echten Installation sind Entitätsverfügbarkeit, tatsächliche Einheiten,
-Berechtigungen und Darstellung nicht überprüfbar.
+These are **static configuration checks, not live Home Assistant or visual tests**.
+Without access to a real installation, entity availability, units, permissions,
+chart rendering, and card-mod application cannot be verified.
 
-### Checkliste in Home Assistant
+### Home Assistant checklist
 
-- Desktop und Smartphone: keine fehlerhaften oder abgeschnittenen Karten.
-- CPU/RAM/Temperatur: tatsächliche Werte und Einheiten, passende Warnschwellen.
-- Historie: Daten vorhanden, WAN-Port und TX/RX korrekt zugeordnet.
-- Client-Zugriff: nur an einem unkritischen Testgerät die Schaltrichtung prüfen;
-  nicht den eigenen Verwaltungszugang sperren.
-- Offline-Liste: ein ausgewähltes Testgerät trennen und nach der
-  Erkennungsverzögerung wieder verbinden; nur offline soll es gelistet sein.
-- Firmware: Antippen öffnet Details, startet aber kein sofortiges Update.
-- Optionale Karten: Ressourcen geladen, richtige Integration/Entry-ID verwendet.
+- Desktop/sidebar open and phone: header, graph row, and device panels wrap
+  without horizontal scrolling or clipped content.
+- If panels look unstyled or stay in six narrow columns, check card-mod loading
+  and browser container-query support; refresh the frontend cache if needed.
+- CPU/memory/temperature: real values, correct units, suitable warning thresholds.
+- History: enough retained data, correct WAN port, correct TX/RX mapping.
+- Access switches: check direction with a noncritical test device; never block
+  your own management access.
+- Offline list: disconnect/reconnect a selected test client and wait for tracking
+  updates; it should only appear when `not_home`.
+- Firmware: tapping opens details and does not immediately start an update.
+- Optional cards: resources loaded and correct integration/entry ID selected.
 
-## Lizenz
+## License
 
-[MIT](./LICENSE). Unabhängiges Community-Projekt; keine Verbindung zu Ubiquiti
-oder dem Home-Assistant-Projekt.
+[MIT](./LICENSE). Independent community project, not affiliated with Ubiquiti
+or the Home Assistant project.

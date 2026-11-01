@@ -35,16 +35,37 @@ check(dashboard.fetch("views").length == 1, "Expected one dashboard view")
 view = dashboard["views"].first
 check(view["type"] == "sections", "Expected a native sections view")
 check(view["max_columns"] == 3, "Expected three desktop columns")
-check(view.fetch("sections").length == 5, "Expected all five dashboard sections")
+check(view.fetch("sections").length == 1, "Expected one full-width overview section")
+section = view["sections"].first
+check(section["column_span"] == 3, "Overview must span all desktop columns")
+rows = section.fetch("cards")
+check(rows.length == 4, "Expected header, traffic, devices and status rows")
+check(rows.map { |row| row["columns"] } == [2, 6, 3, 3], "Incorrect desktop row layout")
+rows.each do |row|
+  check(row["type"] == "grid" && row["square"] == false, "Expected non-square native grids")
+  check(row["grid_options"] == { "columns" => "full", "rows" => "auto" },
+        "Rows must use full width and content-driven height")
+  style = row.fetch("card_mod").fetch("style")
+  check(style.include?("container-type: inline-size;") && style.include?("@container"),
+        "Each row needs width-aware responsive styling")
+end
+check(rows[1]["card_mod"]["style"].include?("max-width: 450px") &&
+      rows[1]["card_mod"]["style"].include?("grid-column: auto;"),
+      "Traffic cards must become single-column on narrow screens")
+check(rows[3]["card_mod"]["style"].include?("grid-column: auto;"),
+      "Offline card must reset its span on narrow screens")
 
-native_types = %w[sections grid heading gauge tile history-graph entities entity-filter]
+native_types = %w[sections grid markdown vertical-stack gauge tile sensor history-graph entities entity-filter]
 nodes = []
 walk(dashboard) do |node|
   nodes << node
   if node.key?("type")
     check(native_types.include?(node["type"]), "Non-native type: #{node['type']}")
   end
-  check(!node.key?("card_mod") && !node.key?("style"), "Unexpected custom styling")
+  if node.key?("card_mod")
+    check(node["card_mod"].keys == ["style"] && node["card_mod"]["style"].is_a?(String),
+          "Use only explicit card-mod CSS, not custom card logic")
+  end
 end
 
 gauges = nodes.select { |node| node["type"] == "gauge" }
@@ -56,12 +77,24 @@ gauges.each do |gauge|
         "Incorrect gauge color thresholds")
 end
 
-graphs = nodes.select { |node| node["type"] == "history-graph" }
-check(graphs.length == 3, "Expected WAN, LAN/WLAN and per-WLAN history")
+graphs = nodes.select { |node| %w[history-graph sensor].include?(node["type"]) }
+check(graphs.length == 5, "Expected WAN plus four compact client graphs")
 graphs.each do |graph|
   check(graph["hours_to_show"] == 168, "History must cover exactly seven days")
-  check(graph["entities"].length.between?(1, 8), "Invalid history entity count")
+  if graph["type"] == "history-graph"
+    check(graph["entities"].length.between?(1, 8), "Invalid history entity count")
+  else
+    check(graph["graph"] == "line" && graph["detail"] == 1,
+          "Native client graphs need hourly line history")
+  end
 end
+check(rows[1]["cards"] == graphs, "All graphs must appear together in the traffic row")
+check(graphs.drop(1).map { |graph| graph["name"] } ==
+      ["LAN clients", "Wi-Fi clients", "Main Wi-Fi", "Guest Wi-Fi"],
+      "Expected English traffic labels in the original overview order")
+check(view["title"] == "Network", "Expected an English view title")
+check(rows[2]["cards"].map { |card| card["title"] } == ["Client access", "LAN", "Wi-Fi"],
+      "Expected English device panels in the original overview order")
 
 offline = nodes.find { |node| node["type"] == "entity-filter" }
 check(!offline.nil?, "Missing native offline list")

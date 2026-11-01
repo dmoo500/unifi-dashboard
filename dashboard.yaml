@@ -1,165 +1,353 @@
 title: UniFi
 views:
-  - title: Netzwerk
+  - title: Network
     path: unifi
     icon: mdi:lan
     type: sections
     max_columns: 3
     sections:
       - type: grid
+        column_span: 3
         cards:
-          - type: heading
-            heading: Router
-            icon: mdi:router-network
-          - type: gauge
-            entity: sensor.dream_router_cpu_utilization
-            name: CPU
-            min: 0
-            max: 100
-            needle: true
-            severity:
-              green: 0
-              yellow: 31
-              red: 61
+          - type: grid
+            columns: 2
+            square: false
             grid_options:
-              columns: 6
-          - type: gauge
-            entity: sensor.dream_router_memory_utilization
-            name: RAM
-            min: 0
-            max: 100
-            needle: true
-            severity:
-              green: 0
-              yellow: 31
-              red: 61
+              columns: full
+              rows: auto
+            card_mod:
+              style: |
+                :host {
+                  container-type: inline-size;
+                  container-name: unifi-header;
+                  background: var(--ha-card-background, var(--card-background-color));
+                  border: 1px solid var(--divider-color);
+                  border-left: 4px solid #0099e8;
+                  border-radius: 8px;
+                  padding: 16px;
+                  box-sizing: border-box;
+                }
+                #root {
+                  align-items: center;
+                  gap: 16px;
+                }
+                @container unifi-header (max-width: 700px) {
+                  #root { grid-template-columns: minmax(0, 1fr); }
+                }
+            cards:
+              - type: markdown
+                content: |
+                  # UniFi Network
+                  Network overview
+                card_mod:
+                  style: |
+                    ha-card {
+                      background: transparent;
+                      border: none;
+                      box-shadow: none;
+                      color: #0099e8;
+                    }
+              - type: vertical-stack
+                cards:
+                  - type: markdown
+                    content: "**UniFi Dream Router**"
+                    card_mod:
+                      style: |
+                        ha-card {
+                          background: transparent;
+                          border: none;
+                          box-shadow: none;
+                        }
+                  - type: grid
+                    columns: 3
+                    square: false
+                    cards:
+                      - type: gauge
+                        entity: sensor.dream_router_cpu_utilization
+                        name: CPU
+                        min: 0
+                        max: 100
+                        needle: true
+                        severity:
+                          green: 0
+                          yellow: 31
+                          red: 61
+                        card_mod:
+                          style: |
+                            ha-card {
+                              background: transparent;
+                              border: none;
+                              box-shadow: none;
+                            }
+                      - type: gauge
+                        entity: sensor.dream_router_memory_utilization
+                        name: Memory
+                        min: 0
+                        max: 100
+                        needle: true
+                        severity:
+                          green: 0
+                          yellow: 31
+                          red: 61
+                        card_mod:
+                          style: |
+                            ha-card {
+                              background: transparent;
+                              border: none;
+                              box-shadow: none;
+                            }
+                      - type: gauge
+                        entity: sensor.dream_router_dream_router_cpu_temperature
+                        name: Temperature
+                        min: 0
+                        max: 100
+                        needle: true
+                        severity:
+                          green: 0
+                          yellow: 31
+                          red: 61
+                        card_mod:
+                          style: |
+                            ha-card {
+                              background: transparent;
+                              border: none;
+                              box-shadow: none;
+                            }
+          - type: grid
+            columns: 6
+            square: false
             grid_options:
-              columns: 6
-          - type: gauge
-            entity: sensor.dream_router_dream_router_cpu_temperature
-            name: CPU-Temperatur
-            min: 0
-            max: 100
-            needle: true
-            severity:
-              green: 0
-              yellow: 31
-              red: 61
-            grid_options:
-              columns: 6
-          - type: tile
-            entity: sensor.dream_router_uptime
-            name: Laufzeit
-            icon: mdi:clock-outline
-            grid_options:
-              columns: 6
-          - type: tile
-            entity: update.dream_router
-            name: Firmware
-            tap_action:
-              action: more-info
-            icon_tap_action:
-              action: more-info
-            grid_options:
-              columns: 12
-      - type: grid
-        cards:
-          - type: heading
-            heading: Netzwerk
-            icon: mdi:lan
-          - type: tile
-            entity: sensor.dream_router_connected_lan_clients
-            name: LAN-Clients
-            icon: mdi:lan
-            grid_options:
-              columns: 6
-          - type: tile
-            entity: sensor.dream_router_wlan_users
-            name: WLAN-Clients
-            icon: mdi:wifi
-            grid_options:
-              columns: 6
-          - type: history-graph
-            title: WAN-Datenrate · 7 Tage
-            hours_to_show: 168
-            entities:
-              - entity: sensor.dream_router_port_5_tx
-                name: Port 5 TX
-              - entity: sensor.dream_router_port_5_rx
-                name: Port 5 RX
-          - type: history-graph
-            title: Verbundene Clients · 7 Tage
-            hours_to_show: 168
-            entities:
-              - entity: sensor.dream_router_connected_lan_clients
-                name: LAN
-              - entity: sensor.dream_router_wlan_users
-                name: WLAN
-      - type: grid
-        cards:
-          - type: heading
-            heading: WLAN
-            icon: mdi:access-point-network
-          - type: entities
-            title: Clients je WLAN
-            show_header_toggle: false
-            entities:
-              - entity: sensor.wlan_main_clients
-                name: Haupt-WLAN
+              columns: full
+              rows: auto
+            card_mod:
+              style: |
+                :host {
+                  container-type: inline-size;
+                  container-name: unifi-traffic;
+                }
+                #root { gap: 8px; }
+                #root > hui-card:first-child { grid-column: span 2; }
+                @container unifi-traffic (max-width: 900px) {
+                  #root { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+                }
+                @container unifi-traffic (max-width: 450px) {
+                  #root { grid-template-columns: minmax(0, 1fr); }
+                  #root > hui-card:first-child { grid-column: auto; }
+                }
+            cards:
+              - type: history-graph
+                title: WAN traffic
+                hours_to_show: 168
+                entities:
+                  - entity: sensor.dream_router_port_5_tx
+                    name: Port 5 TX
+                    color: "#0099e8"
+                  - entity: sensor.dream_router_port_5_rx
+                    name: Port 5 RX
+                    color: "#ff9800"
+                card_mod:
+                  style: |
+                    ha-card {
+                      border-radius: 8px;
+                      box-shadow: none;
+                      --ha-card-header-font-size: 14px;
+                    }
+              - type: sensor
+                entity: sensor.dream_router_connected_lan_clients
+                name: LAN clients
+                icon: mdi:lan
+                graph: line
+                detail: 1
+                hours_to_show: 168
+                card_mod:
+                  style: |
+                    ha-card {
+                      border-radius: 8px;
+                      box-shadow: none;
+                      --accent-color: #ff9800;
+                    }
+                    .name { font-size: 14px; }
+                    .value { font-size: 24px; }
+              - type: sensor
+                entity: sensor.dream_router_wlan_users
+                name: Wi-Fi clients
                 icon: mdi:wifi
-              - entity: sensor.wlan_guest_clients
-                name: Gast-WLAN
+                graph: line
+                detail: 1
+                hours_to_show: 168
+                card_mod:
+                  style: |
+                    ha-card {
+                      border-radius: 8px;
+                      box-shadow: none;
+                      --accent-color: #ff9800;
+                    }
+                    .name { font-size: 14px; }
+                    .value { font-size: 24px; }
+              - type: sensor
+                entity: sensor.wlan_main_clients
+                name: Main Wi-Fi
                 icon: mdi:wifi
-              - entity: sensor.wlan_main_disconnected_clients
-                name: Haupt-WLAN getrennte Clients
-                icon: mdi:wifi-off
-          - type: history-graph
-            title: WLAN-Clients · 7 Tage
-            hours_to_show: 168
-            entities:
-              - entity: sensor.wlan_main_clients
-                name: Haupt-WLAN
-              - entity: sensor.wlan_guest_clients
-                name: Gast-WLAN
-      - type: grid
-        cards:
-          - type: heading
-            heading: Netzwerkzugriff
-            icon: mdi:shield-lock-outline
-          - type: entities
-            title: Client-Zugriff
-            show_header_toggle: false
-            entities:
-              - entity: switch.client_1
-                name: Client 1
-                secondary_info: last-changed
-              - entity: switch.client_2
-                name: Client 2
-                secondary_info: last-changed
-              - entity: switch.client_3
-                name: Client 3
-                secondary_info: last-changed
-      - type: grid
-        cards:
-          - type: heading
-            heading: Offline-Clients
-            icon: mdi:lan-disconnect
-          - type: entity-filter
-            entities:
-              - entity: device_tracker.client_1
-                name: Client 1
-                secondary_info: last-changed
-              - entity: device_tracker.client_2
-                name: Client 2
-                secondary_info: last-changed
-              - entity: device_tracker.client_3
-                name: Client 3
-                secondary_info: last-changed
-            conditions:
-              - condition: state
-                state: not_home
-            show_empty: true
-            card:
-              type: entities
-              title: Nicht im Netzwerk
-              show_header_toggle: false
+                graph: line
+                detail: 1
+                hours_to_show: 168
+                card_mod:
+                  style: |
+                    ha-card {
+                      border-radius: 8px;
+                      box-shadow: none;
+                      --accent-color: #ff9800;
+                    }
+                    .name { font-size: 14px; }
+                    .value { font-size: 24px; }
+              - type: sensor
+                entity: sensor.wlan_guest_clients
+                name: Guest Wi-Fi
+                icon: mdi:wifi
+                graph: line
+                detail: 1
+                hours_to_show: 168
+                card_mod:
+                  style: |
+                    ha-card {
+                      border-radius: 8px;
+                      box-shadow: none;
+                      --accent-color: #ff9800;
+                    }
+                    .name { font-size: 14px; }
+                    .value { font-size: 24px; }
+          - type: grid
+            columns: 3
+            square: false
+            grid_options:
+              columns: full
+              rows: auto
+            card_mod:
+              style: |
+                :host {
+                  container-type: inline-size;
+                  container-name: unifi-devices;
+                }
+                #root { align-items: start; gap: 8px; }
+                @container unifi-devices (max-width: 700px) {
+                  #root { grid-template-columns: minmax(0, 1fr); }
+                }
+            cards:
+              - type: entities
+                title: Client access
+                show_header_toggle: false
+                entities:
+                  - entity: switch.client_1
+                    name: Client 1
+                    secondary_info: last-changed
+                  - entity: switch.client_2
+                    name: Client 2
+                    secondary_info: last-changed
+                  - entity: switch.client_3
+                    name: Client 3
+                    secondary_info: last-changed
+                card_mod:
+                  style: |
+                    ha-card {
+                      border-radius: 8px;
+                      box-shadow: none;
+                      --ha-card-header-font-size: 16px;
+                    }
+              - type: entities
+                title: LAN
+                show_header_toggle: false
+                entities:
+                  - entity: sensor.dream_router_uptime
+                    name: Uptime
+                    icon: mdi:clock-outline
+                  - entity: sensor.dream_router_connected_lan_clients
+                    name: Connected clients
+                    icon: mdi:lan
+                card_mod:
+                  style: |
+                    ha-card {
+                      border-radius: 8px;
+                      box-shadow: none;
+                      --ha-card-header-font-size: 16px;
+                    }
+              - type: entities
+                title: Wi-Fi
+                show_header_toggle: false
+                entities:
+                  - entity: sensor.dream_router_wlan_users
+                    name: Connected clients
+                    icon: mdi:wifi
+                  - entity: sensor.wlan_main_clients
+                    name: Main Wi-Fi
+                    icon: mdi:access-point-network
+                  - entity: sensor.wlan_guest_clients
+                    name: Guest Wi-Fi
+                    icon: mdi:wifi
+                  - entity: sensor.wlan_main_disconnected_clients
+                    name: Main Wi-Fi disconnected
+                    icon: mdi:wifi-off
+                card_mod:
+                  style: |
+                    ha-card {
+                      border-radius: 8px;
+                      box-shadow: none;
+                      --ha-card-header-font-size: 16px;
+                    }
+          - type: grid
+            columns: 3
+            square: false
+            grid_options:
+              columns: full
+              rows: auto
+            card_mod:
+              style: |
+                :host {
+                  container-type: inline-size;
+                  container-name: unifi-status;
+                }
+                #root { align-items: start; gap: 8px; }
+                #root > hui-card:nth-child(2) { grid-column: span 2; }
+                @container unifi-status (max-width: 700px) {
+                  #root { grid-template-columns: minmax(0, 1fr); }
+                  #root > hui-card:nth-child(2) { grid-column: auto; }
+                }
+            cards:
+              - type: tile
+                entity: update.dream_router
+                name: Firmware
+                tap_action:
+                  action: more-info
+                icon_tap_action:
+                  action: more-info
+                card_mod:
+                  style: |
+                    ha-card {
+                      border-radius: 8px;
+                      box-shadow: none;
+                    }
+              - type: entity-filter
+                entities:
+                  - entity: device_tracker.client_1
+                    name: Client 1
+                    secondary_info: last-changed
+                  - entity: device_tracker.client_2
+                    name: Client 2
+                    secondary_info: last-changed
+                  - entity: device_tracker.client_3
+                    name: Client 3
+                    secondary_info: last-changed
+                conditions:
+                  - condition: state
+                    state: not_home
+                show_empty: true
+                card:
+                  type: entities
+                  title: Offline clients
+                  show_header_toggle: false
+                  card_mod:
+                    style: |
+                      ha-card {
+                        border-radius: 8px;
+                        box-shadow: none;
+                        --ha-card-header-font-size: 16px;
+                      }

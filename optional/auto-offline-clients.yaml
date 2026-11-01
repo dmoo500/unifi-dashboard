@@ -1,8 +1,15 @@
 type: custom:auto-entities
 card:
   type: entities
-  title: Offline-Clients (UniFi)
+  title: Offline clients (UniFi)
   show_header_toggle: false
+  card_mod:
+    style: |
+      ha-card {
+        border-radius: 8px;
+        box-shadow: none;
+        --ha-card-header-font-size: 16px;
+      }
 show_empty: true
 unique: true
 filter:
