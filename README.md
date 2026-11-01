@@ -25,7 +25,8 @@ On a wide screen:
 ```
 
 This is a layout guide, **not a screenshot of a tested live installation**.
-The header spans the dashboard, WAN traffic gets twice the width of a client
+The header spans the dashboard, with CPU, memory, and temperature histories
+stacked vertically on the right. WAN traffic gets twice the width of a client
 graph, and the offline list occupies two device columns. CSS container queries
 adapt to the available card width, including when the Home Assistant sidebar is
 open: the traffic row becomes two columns below 900px and one below 450px;
@@ -34,14 +35,18 @@ the header and device rows stack below 700px.
 Cards use theme-provided backgrounds/text, subtle borders, 8px corners, blue
 and orange graph accents, and no forced dark theme. There are no external images.
 
-**Native design limits:** router values use semicircular gauges, not the original
-Bubble progress bars. Native sensor graphs show a current value and history;
+**Native design limits:** router values use three stacked 24-hour line graphs
+with current values, not the original Bubble progress bars. Each entire line
+uses green/yellow/red according to the **current** value, not the historical
+value of each segment. Missing/non-numeric current states use a neutral color.
+Native sensor graphs show a current value and history;
 the WAN graph retains native axes and legend. These are not pixel-identical to
 Mini Graph Card. Styling does not replace the charts or hide missing data.
 
 ## Features
 
-- CPU, memory, and CPU temperature with colored native gauges.
+- CPU, memory, and CPU temperature as stacked 24-hour native line graphs,
+  with current-value warning colors and compact 40px sparklines.
 - Current LAN/Wi-Fi/main/guest client counts with seven-day native sensor graphs.
 - Seven-day TX/RX history for the WAN port.
 - Router uptime, Wi-Fi details, and individual client-access switches.
@@ -55,7 +60,7 @@ Replace the example entity IDs before using it.
 ## Requirements
 
 - A current stable Home Assistant release with Sections views, native sensor,
-  gauge, tile, and entity-filter cards supporting `conditions`.
+  tile, and entity-filter cards supporting `conditions`.
 - The official [UniFi Network integration](https://www.home-assistant.io/integrations/unifi/).
 - [card-mod 4](https://github.com/thomasloven/lovelace-card-mod), installed through
   HACS or manually according to its instructions. Its support for styling native
@@ -144,7 +149,7 @@ hardware, firmware, integration version, and account permissions.
    and include disabled entities. Enable the relevant entity if it is provided
    and you need it. A disabled entity may not appear under Developer tools.
 3. In **Developer tools > States**, select the entity and inspect its **raw state**,
-   `unit_of_measurement`, and relevant attributes. A gauge/graph needs a numeric
+   `unit_of_measurement`, and relevant attributes. A graph needs a numeric
    state such as `42`, not text such as `42%`. The `%` belongs in the unit attribute.
    `unknown` or `unavailable` cannot establish that a replacement is working.
 4. Confirm it belongs to the intended device/network, copy its full entity ID,
@@ -160,15 +165,17 @@ entity, and does not operate the device.
 For example, if your router exposes `sensor.gateway_cpu_usage` in percent, change:
 
 ```yaml
-type: gauge
+type: sensor
 entity: sensor.gateway_cpu_usage
 name: CPU
-min: 0
-max: 100
+graph: line
+detail: 2
+hours_to_show: 24
 ```
 
 This is a **partial illustration**, not a complete replacement dashboard.
-Keep the existing gauge's styling, needle, and severity settings. The new ID is
+Keep the existing chart's `card_mod` styling and color template: it reads
+`config.entity`, so it automatically follows the replacement entity. The new ID is
 illustrative; it is not guaranteed to exist in your installation.
 
 In VS Code, use Find/Replace within your local dashboard copy to replace the
@@ -184,13 +191,13 @@ or fewer clients; matching the example's three clients is not required.
 
 | Situation | Safe adaptation |
 | --- | --- |
-| No CPU temperature sensor | Remove that gauge and optionally set the inner gauge grid to `columns: 2`. Do not substitute a fake zero. |
+| No CPU temperature sensor | Remove that sensor card from the router's vertical stack. Do not substitute a fake zero. |
 | No guest Wi-Fi | Remove its sensor card **and** its Wi-Fi details row. In the traffic grid change `columns: 6` to `5` to keep the remaining four cards on one desktop row with WAN spanning two columns. |
 | No disconnected-count sensor | Remove only that details row. Do not substitute a tracker or estimate a count from its state. |
 | No client-access switches / insufficient permissions | Remove the Client access card; a tracker is read-only and cannot replace a switch. |
 | No firmware `update` entity | Remove the tile. A restart button is not a firmware update replacement. |
 | Only a connectivity `binary_sensor` is available | Not a drop-in tracker replacement: identify its raw connected/disconnected states and adjust the native filter conditions and entity domain deliberately. The optional Auto Entities snippet only discovers UniFi `device_tracker` entities. |
-| CPU/memory reported as a 0–1 fraction or bytes | Not compatible with the percentage gauges as supplied. Use a real percentage metric or explicitly create and document a persistent conversion sensor outside this template. |
+| CPU/memory reported as a 0–1 fraction or bytes | Not compatible with the percentage warning thresholds as supplied. Use a real percentage metric or explicitly create and document a persistent conversion sensor outside this template. |
 | WAN RX/TX use different units | Use matching-rate entities or an explicit persistent unit conversion. Renaming a unit does not convert values. |
 | No numeric client-count sensors | Remove the corresponding graphs/rows or supply separately configured numeric count sensors. Presence trackers cannot replace count sensors directly. |
 
@@ -204,12 +211,18 @@ snippet requires its separate Network Map integration entry.
 - Port 5 is an example. TX/RX are from the router port's perspective; do not
   assume download/upload direction without checking. These are data rates,
   **not an internet speed test**. Use sensors with matching units.
-- The temperature gauge assumes °C without overriding the entity's unit.
-  Convert its range and thresholds if your entity uses °F.
-- Gauge colors use the original example's thresholds: green from 0, yellow from
-  31, red from 61. Native gauges use inclusive lower bounds, approximating the
-  old strict `above: 60` condition for integer values. Customize thresholds,
-  especially temperature, for your hardware.
+- The temperature chart assumes °C without overriding the entity's unit.
+  Convert its warning thresholds if your entity uses °F.
+- Router line colors use the current numeric value: green below 31, yellow from
+  31 up to (but not including) 61, red from 61. Edit the `>= 31` / `>= 61` checks
+  in each chart's `card_mod` template to customize the thresholds, especially
+  temperature. These are example thresholds, not hardware safety guarantees.
+  The entire history is recolored when the current value changes; historical
+  threshold crossings are not individually colored. Unknown, unavailable,
+  and other non-numeric states remain neutral, never a fabricated zero.
+- Router charts retain 24 hours of history; traffic/client charts retain the
+  seven-day display period. Both require actual Recorder data. Changing a
+  router chart's `hours_to_show` does not change its current-value color rules.
 - Wi-Fi counters count **clients**, not access points.
 - Official UniFi client-access switches normally mean **on = access allowed**,
   **off = blocked**. Verify before switching; do not substitute PoE, Wi-Fi, or
@@ -278,7 +291,7 @@ own updates and compatibility; their code is not bundled here.
 
 The screenshot's broad header, traffic row, three-column device panels, and wide
 offline list guide this layout. Native grids and one native vertical stack replace
-the repeated custom stacks. Native gauges and sensor/history graphs replace
+the repeated custom stacks. Native stacked sensor/history graphs replace
 Bubble Card and Mini Graph Card; card-mod supplies presentation only.
 
 Duplicate uptime rows and the misleading “Access Points” counter label are gone.
@@ -297,7 +310,8 @@ ruby tests/validate.rb
 
 This uses Ruby's standard library to check YAML syntax, duplicate keys, native
 card types, the full-width layout and responsive-style rules, entity documentation,
-gauge thresholds, seven-day graphs, safe firmware actions, and optional filters.
+router warning templates and 24-hour histories, seven-day traffic graphs, safe
+firmware actions, and optional filters.
 GitHub Actions runs the same checks.
 
 These are **static configuration checks, not live Home Assistant or visual tests**.

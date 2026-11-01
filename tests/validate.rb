@@ -55,7 +55,7 @@ check(rows[1]["card_mod"]["style"].include?("max-width: 450px") &&
 check(rows[3]["card_mod"]["style"].include?("grid-column: auto;"),
       "Offline card must reset its span on narrow screens")
 
-native_types = %w[sections grid markdown vertical-stack gauge tile sensor history-graph entities entity-filter]
+native_types = %w[sections grid markdown vertical-stack tile sensor history-graph entities entity-filter]
 nodes = []
 walk(dashboard) do |node|
   nodes << node
@@ -63,21 +63,34 @@ walk(dashboard) do |node|
     check(native_types.include?(node["type"]), "Non-native type: #{node['type']}")
   end
   if node.key?("card_mod")
-    check(node["card_mod"].keys == ["style"] && node["card_mod"]["style"].is_a?(String),
-          "Use only explicit card-mod CSS, not custom card logic")
+    style = node["card_mod"]["style"]
+    check(node["card_mod"].keys == ["style"] &&
+          (style.is_a?(String) || (style.is_a?(Hash) && style.values.all? { |css| css.is_a?(String) })),
+          "Use explicit card-mod CSS or shadow-root style mappings")
   end
 end
 
-gauges = nodes.select { |node| node["type"] == "gauge" }
-check(gauges.length == 3, "Expected CPU, RAM and temperature gauges")
-gauges.each do |gauge|
-  check(gauge["min"] == 0 && gauge["max"] == 100, "Incorrect gauge range")
-  check(gauge["needle"] == true, "Expected needle gauges")
-  check(gauge["severity"] == { "green" => 0, "yellow" => 31, "red" => 61 },
-        "Incorrect gauge color thresholds")
+router_stack = rows[0]["cards"][1]
+check(router_stack["type"] == "vertical-stack", "Router history must be vertically stacked")
+router_graphs = router_stack["cards"].drop(1)
+check(router_graphs.map { |card| card["name"] } == ["CPU", "Memory", "Temperature"],
+      "Expected three stacked router histories")
+router_graphs.each do |graph|
+  check(graph["type"] == "sensor" && graph["graph"] == "line" &&
+        graph["hours_to_show"] == 24 && graph["detail"] == 2,
+        "Router charts must show detailed 24-hour native line history")
+  styles = graph.fetch("card_mod").fetch("style")
+  css = styles.fetch(".")
+  check(css.include?("states(config.entity)") && css.include?("not is_number(value)") &&
+        css.include?("var(--disabled-text-color)"), "Missing entity-aware unavailable-state guard")
+  check(css.include?("value | float >= 61") && css.include?("value | float >= 31") &&
+        css.include?("var(--error-color)") && css.include?("var(--warning-color)") &&
+        css.include?("var(--success-color)"), "Incorrect current-value color thresholds")
+  check(styles.fetch("hui-graph-header-footer $").include?("padding-bottom: 40px"),
+        "Router sparklines must use compact 40px graph height")
 end
 
-graphs = nodes.select { |node| %w[history-graph sensor].include?(node["type"]) }
+graphs = rows[1]["cards"]
 check(graphs.length == 5, "Expected WAN plus four compact client graphs")
 graphs.each do |graph|
   check(graph["hours_to_show"] == 168, "History must cover exactly seven days")
@@ -154,4 +167,4 @@ check(map["entry_id"] == "REPLACE_WITH_NETWORK_MAP_ENTRY_ID",
 check(map["card_height"] == 600, "Expected a valid numeric map height")
 load_yaml(".github/workflows/validate.yml")
 
-puts "PASS: YAML, native cards, 18 documented entities, gauges, history and optional cards"
+puts "PASS: YAML, native cards, 18 documented entities, stacked router history and optional cards"
