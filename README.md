@@ -108,22 +108,96 @@ Router IDs follow the original Dream Router example, but your IDs may differ
 even with the same hardware. Wi-Fi networks and clients use neutral placeholders.
 Replace each ID **at every occurrence**.
 
-| Example entity | Required value |
+The prefix before the dot is the **entity domain**, not the device model.
+`name:` only changes the displayed label; `entity:` selects the actual data or
+control. Device names, MAC addresses, integration entry IDs, and friendly names
+cannot replace an entity ID.
+
+| Example entity | Domain / expected state and unit | Select from / avoid | Replace |
+| --- | --- | --- | --- |
+| `sensor.dream_router_cpu_utilization` | `sensor`: numeric 0–100, `%` | Router CPU utilization; not CPU load average | 1 occurrence |
+| `sensor.dream_router_memory_utilization` | `sensor`: numeric 0–100, `%` | Router memory utilization; not free/used memory in bytes | 1 occurrence |
+| `sensor.dream_router_dream_router_cpu_temperature` | `sensor`: numeric temperature, `°C` | Router CPU temperature; not another device's temperature | 1 occurrence |
+| `sensor.dream_router_uptime` | `sensor`: duration with time unit, or timestamp with `device_class: timestamp` | Router uptime/startup; not a client's last-seen time | 1 occurrence |
+| `update.dream_router` | `update`: `on` = update available, `off` = no update offered | Router firmware; not HA Core update or a restart `button` | 1 occurrence |
+| `sensor.dream_router_connected_lan_clients` | `sensor`: nonnegative numeric count, no physical unit | Connected wired clients at the intended router/site scope; not port count | 2 occurrences |
+| `sensor.dream_router_wlan_users` | `sensor`: nonnegative numeric count, no physical unit | Connected Wi-Fi clients at the intended router/site scope; not AP count | 2 occurrences |
+| `sensor.dream_router_port_5_tx` | `sensor`: numeric data **rate**, e.g. `Mbit/s` | Actual WAN port TX; not cumulative bytes or negotiated link speed | 1 occurrence |
+| `sensor.dream_router_port_5_rx` | `sensor`: numeric data **rate**, same unit as TX | Same WAN port RX; not cumulative bytes or negotiated link speed | 1 occurrence |
+| `sensor.wlan_main_clients` | `sensor`: nonnegative numeric count | Clients of the main SSID; not a Wi-Fi enable/disable switch | 2 occurrences |
+| `sensor.wlan_guest_clients` | `sensor`: nonnegative numeric count | Clients of the guest SSID; not an unrelated network | 2 occurrences |
+| `sensor.wlan_main_disconnected_clients` | `sensor`: nonnegative numeric count | Disconnected clients of the main SSID, if provided; not a connectivity `binary_sensor` | 1 occurrence |
+| `switch.client_1`, `switch.client_2`, `switch.client_3` | `switch`: `on` / `off`, verified access semantics | Individual UniFi client access; not PoE, port power, SSID, or firewall switches | 1 occurrence each |
+| `device_tracker.client_1`, `device_tracker.client_2`, `device_tracker.client_3` | `device_tracker`: `home` / `not_home`; `source_type: router` for automatic discovery | Router-backed client presence; not `person`, GPS tracker, or connectivity `binary_sensor` | 1 occurrence each |
+
+Counts refer to the supplied base dashboard, not optional cards. SSID-wide and
+router-wide client counts are not interchangeable; pick the scope you intend
+and rename the card if it differs. Availability and entity names vary by UniFi
+hardware, firmware, integration version, and account permissions.
+
+#### Finding the right entity
+
+1. Open **Settings > Devices & services > UniFi Network** and open your router,
+   Wi-Fi network, or client device. Look for the metric/control described above;
+   the entity's exact label may vary.
+2. If it is missing, use the **Entities** list with the UniFi integration filter
+   and include disabled entities. Enable the relevant entity if it is provided
+   and you need it. A disabled entity may not appear under Developer tools.
+3. In **Developer tools > States**, select the entity and inspect its **raw state**,
+   `unit_of_measurement`, and relevant attributes. A gauge/graph needs a numeric
+   state such as `42`, not text such as `42%`. The `%` belongs in the unit attribute.
+   `unknown` or `unavailable` cannot establish that a replacement is working.
+4. Confirm it belongs to the intended device/network, copy its full entity ID,
+   and compare a live value with the UniFi controller. For switches, verify
+   behavior using a noncritical client only.
+
+Do not use **Set state** to create missing sensors or convert units. That only
+changes HA's current in-memory state, does not create a persistent integration
+entity, and does not operate the device.
+
+#### Replacing entities safely
+
+For example, if your router exposes `sensor.gateway_cpu_usage` in percent, change:
+
+```yaml
+type: gauge
+entity: sensor.gateway_cpu_usage
+name: CPU
+min: 0
+max: 100
+```
+
+This is a **partial illustration**, not a complete replacement dashboard.
+Keep the existing gauge's styling, needle, and severity settings. The new ID is
+illustrative; it is not guaranteed to exist in your installation.
+
+In VS Code, use Find/Replace within your local dashboard copy to replace the
+**full old ID**, not just `dream_router`. For example, replace
+`sensor.dream_router_connected_lan_clients` in both the graph and LAN details.
+Do not rename actual HA entities just to match this template.
+
+Client switches and trackers are separate entities even for the same physical
+device. Map each independently. Add/remove complete list items to support more
+or fewer clients; matching the example's three clients is not required.
+
+#### Missing or incompatible entities
+
+| Situation | Safe adaptation |
 | --- | --- |
-| `sensor.dream_router_cpu_utilization` | CPU utilization in percent |
-| `sensor.dream_router_memory_utilization` | Memory utilization in percent |
-| `sensor.dream_router_dream_router_cpu_temperature` | CPU temperature in °C |
-| `sensor.dream_router_uptime` | Uptime or startup timestamp, depending on the integration |
-| `update.dream_router` | Firmware update entity |
-| `sensor.dream_router_connected_lan_clients` | Connected LAN client count |
-| `sensor.dream_router_wlan_users` | Connected Wi-Fi client count |
-| `sensor.dream_router_port_5_tx` | TX rate of the actual WAN port |
-| `sensor.dream_router_port_5_rx` | RX rate of the actual WAN port |
-| `sensor.wlan_main_clients` | Main Wi-Fi client count |
-| `sensor.wlan_guest_clients` | Guest Wi-Fi client count |
-| `sensor.wlan_main_disconnected_clients` | Main Wi-Fi disconnected client count |
-| `switch.client_1`, `switch.client_2`, `switch.client_3` | UniFi client-access switches |
-| `device_tracker.client_1`, `device_tracker.client_2`, `device_tracker.client_3` | UniFi client trackers |
+| No CPU temperature sensor | Remove that gauge and optionally set the inner gauge grid to `columns: 2`. Do not substitute a fake zero. |
+| No guest Wi-Fi | Remove its sensor card **and** its Wi-Fi details row. In the traffic grid change `columns: 6` to `5` to keep the remaining four cards on one desktop row with WAN spanning two columns. |
+| No disconnected-count sensor | Remove only that details row. Do not substitute a tracker or estimate a count from its state. |
+| No client-access switches / insufficient permissions | Remove the Client access card; a tracker is read-only and cannot replace a switch. |
+| No firmware `update` entity | Remove the tile. A restart button is not a firmware update replacement. |
+| Only a connectivity `binary_sensor` is available | Not a drop-in tracker replacement: identify its raw connected/disconnected states and adjust the native filter conditions and entity domain deliberately. The optional Auto Entities snippet only discovers UniFi `device_tracker` entities. |
+| CPU/memory reported as a 0–1 fraction or bytes | Not compatible with the percentage gauges as supplied. Use a real percentage metric or explicitly create and document a persistent conversion sensor outside this template. |
+| WAN RX/TX use different units | Use matching-rate entities or an explicit persistent unit conversion. Renaming a unit does not convert values. |
+| No numeric client-count sensors | Remove the corresponding graphs/rows or supply separately configured numeric count sensors. Presence trackers cannot replace count sensors directly. |
+
+Compatible sensors from another integration can drive the native numeric cards
+if meaning, scope, state, and units match. The **automatic** offline snippet is
+intentionally restricted to the official `unifi` integration; the topology
+snippet requires its separate Network Map integration entry.
 
 ### Important semantics
 

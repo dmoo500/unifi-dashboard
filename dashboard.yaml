@@ -1,3 +1,5 @@
+# Entity selection and replacement guide: README.md#entity-mapping
+# Replace full entity IDs at every occurrence; names only change display labels.
 title: UniFi
 views:
   - title: Network
@@ -63,6 +65,7 @@ views:
                     square: false
                     cards:
                       - type: gauge
+                        # Router CPU: numeric sensor, 0-100 percent (not a load average).
                         entity: sensor.dream_router_cpu_utilization
                         name: CPU
                         min: 0
@@ -80,6 +83,7 @@ views:
                               box-shadow: none;
                             }
                       - type: gauge
+                        # Router memory: utilization percent, not used/free bytes.
                         entity: sensor.dream_router_memory_utilization
                         name: Memory
                         min: 0
@@ -97,6 +101,7 @@ views:
                               box-shadow: none;
                             }
                       - type: gauge
+                        # Router CPU temperature in Celsius; adjust range/thresholds for Fahrenheit.
                         entity: sensor.dream_router_dream_router_cpu_temperature
                         name: Temperature
                         min: 0
@@ -139,6 +144,7 @@ views:
                 title: WAN traffic
                 hours_to_show: 168
                 entities:
+                  # Same WAN port, numeric rates with matching units; not byte totals/link speed.
                   - entity: sensor.dream_router_port_5_tx
                     name: Port 5 TX
                     color: "#0099e8"
@@ -153,6 +159,7 @@ views:
                       --ha-card-header-font-size: 14px;
                     }
               - type: sensor
+                # Connected wired-client count; also replace this ID in LAN details.
                 entity: sensor.dream_router_connected_lan_clients
                 name: LAN clients
                 icon: mdi:lan
@@ -169,6 +176,7 @@ views:
                     .name { font-size: 14px; }
                     .value { font-size: 24px; }
               - type: sensor
+                # Connected Wi-Fi-client count; also replace this ID in Wi-Fi details.
                 entity: sensor.dream_router_wlan_users
                 name: Wi-Fi clients
                 icon: mdi:wifi
@@ -185,6 +193,7 @@ views:
                     .name { font-size: 14px; }
                     .value { font-size: 24px; }
               - type: sensor
+                # Main SSID's numeric client count; also used in Wi-Fi details.
                 entity: sensor.wlan_main_clients
                 name: Main Wi-Fi
                 icon: mdi:wifi
@@ -201,6 +210,7 @@ views:
                     .name { font-size: 14px; }
                     .value { font-size: 24px; }
               - type: sensor
+                # Guest SSID's numeric client count; remove both references if absent.
                 entity: sensor.wlan_guest_clients
                 name: Guest Wi-Fi
                 icon: mdi:wifi
@@ -237,6 +247,7 @@ views:
                 title: Client access
                 show_header_toggle: false
                 entities:
+                  # Client internet/network access switches: on = allowed, off = blocked; verify first.
                   - entity: switch.client_1
                     name: Client 1
                     secondary_info: last-changed
@@ -257,6 +268,7 @@ views:
                 title: LAN
                 show_header_toggle: false
                 entities:
+                  # Router uptime sensor: duration or startup timestamp, not a client last-seen value.
                   - entity: sensor.dream_router_uptime
                     name: Uptime
                     icon: mdi:clock-outline
@@ -283,6 +295,7 @@ views:
                   - entity: sensor.wlan_guest_clients
                     name: Guest Wi-Fi
                     icon: mdi:wifi
+                  # Numeric disconnected-client count for this SSID, not a binary status.
                   - entity: sensor.wlan_main_disconnected_clients
                     name: Main Wi-Fi disconnected
                     icon: mdi:wifi-off
@@ -313,6 +326,7 @@ views:
                 }
             cards:
               - type: tile
+                # Router firmware update entity, not a restart button or HA Core update.
                 entity: update.dream_router
                 name: Firmware
                 tap_action:
@@ -327,6 +341,7 @@ views:
                     }
               - type: entity-filter
                 entities:
+                  # Router-backed client trackers with home/not_home states; not person or binary_sensor.
                   - entity: device_tracker.client_1
                     name: Client 1
                     secondary_info: last-changed

@@ -116,13 +116,23 @@ firmware = nodes.find { |node| node["entity"] == "update.dream_router" }
         "Firmware interaction must open details, not install an update")
 end
 
-readme = File.read(File.join(ROOT, "README.md"))
+readme = File.read(File.join(ROOT, "README.md"), encoding: "UTF-8")
 entities = nodes.filter_map { |node| node["entity"] }.uniq
 check(entities.length == 18, "Expected all 18 example entities")
 entities.each do |entity|
   check(entity.match?(/\A(?:sensor|switch|update|device_tracker)\.[a-z0-9_]+\z/),
         "Invalid entity ID: #{entity}")
   check(readme.include?("`#{entity}`"), "Undocumented entity: #{entity}")
+end
+mapping = readme.split("#### Finding the right entity", 2).first
+entities.each do |entity|
+  row = mapping.lines.find { |line| line.start_with?("| ") && line.include?("`#{entity}`") }
+  check(!row.nil?, "Missing entity selection table row: #{entity}")
+  domain = entity.split(".").first
+  check(row.include?("`#{domain}`:"), "Missing expected domain/state: #{entity}")
+  occurrences = nodes.count { |node| node["entity"] == entity }
+  suffix = occurrences == 1 ? "occurrence" : "occurrences"
+  check(row.include?("#{occurrences} #{suffix}"), "Incorrect replacement count: #{entity}")
 end
 
 automatic = load_yaml("optional/auto-offline-clients.yaml")
