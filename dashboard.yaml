@@ -60,90 +60,96 @@ views:
                           border: none;
                           box-shadow: none;
                         }
-                  - type: sensor
+                  - type: custom:mini-graph-card
                     # Router CPU: numeric sensor, 0-100 percent (not a load average).
-                    entity: sensor.dream_router_cpu_utilization
+                    entities:
+                      - entity: sensor.dream_router_cpu_utilization
                     name: CPU
-                    graph: line
-                    detail: 2
+                    icon: mdi:cpu-64-bit
                     hours_to_show: 24
+                    points_per_hour: 6
+                    aggregate_func: avg
+                    height: 40
+                    line_width: 2
+                    font_size: 70
+                    color_thresholds_transition: hard
+                    color_thresholds:
+                      - value: 0
+                        color: "#43a047"
+                      - value: 31
+                        color: "#ff9800"
+                      - value: 61
+                        color: "#f44336"
+                    show:
+                      fill: fade
+                      state: true
                     card_mod:
-                      style:
-                        .: |
-                          {% set value = states(config.entity) %}
-                          ha-card {
-                            --accent-color:
-                              {% if not is_number(value) %}var(--disabled-text-color)
-                              {% elif value | float >= 61 %}var(--error-color)
-                              {% elif value | float >= 31 %}var(--warning-color)
-                              {% else %}var(--success-color){% endif %};
-                            background: transparent;
-                            border: none;
-                            box-shadow: none;
-                          }
-                          .header { padding: 0 8px; }
-                          .name { font-size: 13px; line-height: 28px; }
-                          .icon { line-height: 28px; }
-                          .info { padding: 0 8px 4px; margin-top: 0; }
-                          .value { font-size: 20px; }
-                        hui-graph-header-footer $: |
-                          .container { padding-bottom: 40px; }
-                  - type: sensor
+                      style: |
+                        ha-card {
+                          background: transparent;
+                          border: none;
+                          box-shadow: none;
+                        }
+                  - type: custom:mini-graph-card
                     # Router memory: utilization percent, not used/free bytes.
-                    entity: sensor.dream_router_memory_utilization
+                    entities:
+                      - entity: sensor.dream_router_memory_utilization
                     name: Memory
-                    graph: line
-                    detail: 2
+                    icon: mdi:memory
                     hours_to_show: 24
+                    points_per_hour: 6
+                    aggregate_func: avg
+                    height: 40
+                    line_width: 2
+                    font_size: 70
+                    color_thresholds_transition: hard
+                    color_thresholds:
+                      - value: 0
+                        color: "#43a047"
+                      - value: 31
+                        color: "#ff9800"
+                      - value: 61
+                        color: "#f44336"
+                    show:
+                      fill: fade
+                      state: true
                     card_mod:
-                      style:
-                        .: |
-                          {% set value = states(config.entity) %}
-                          ha-card {
-                            --accent-color:
-                              {% if not is_number(value) %}var(--disabled-text-color)
-                              {% elif value | float >= 61 %}var(--error-color)
-                              {% elif value | float >= 31 %}var(--warning-color)
-                              {% else %}var(--success-color){% endif %};
-                            background: transparent;
-                            border: none;
-                            box-shadow: none;
-                          }
-                          .header { padding: 0 8px; }
-                          .name { font-size: 13px; line-height: 28px; }
-                          .icon { line-height: 28px; }
-                          .info { padding: 0 8px 4px; margin-top: 0; }
-                          .value { font-size: 20px; }
-                        hui-graph-header-footer $: |
-                          .container { padding-bottom: 40px; }
-                  - type: sensor
+                      style: |
+                        ha-card {
+                          background: transparent;
+                          border: none;
+                          box-shadow: none;
+                        }
+                  - type: custom:mini-graph-card
                     # Router CPU temperature in Celsius; adjust thresholds for Fahrenheit.
-                    entity: sensor.dream_router_dream_router_cpu_temperature
+                    entities:
+                      - entity: sensor.dream_router_dream_router_cpu_temperature
                     name: Temperature
-                    graph: line
-                    detail: 2
+                    icon: mdi:thermometer
                     hours_to_show: 24
+                    points_per_hour: 6
+                    aggregate_func: avg
+                    height: 40
+                    line_width: 2
+                    font_size: 70
+                    color_thresholds_transition: hard
+                    color_thresholds:
+                      - value: 0
+                        color: "#43a047"
+                      - value: 31
+                        color: "#ff9800"
+                      - value: 61
+                        color: "#f44336"
+                    show:
+                      fill: fade
+                      state: true
                     card_mod:
-                      style:
-                        .: |
-                          {% set value = states(config.entity) %}
-                          ha-card {
-                            --accent-color:
-                              {% if not is_number(value) %}var(--disabled-text-color)
-                              {% elif value | float >= 61 %}var(--error-color)
-                              {% elif value | float >= 31 %}var(--warning-color)
-                              {% else %}var(--success-color){% endif %};
-                            background: transparent;
-                            border: none;
-                            box-shadow: none;
-                          }
-                          .header { padding: 0 8px; }
-                          .name { font-size: 13px; line-height: 28px; }
-                          .icon { line-height: 28px; }
-                          .info { padding: 0 8px 4px; margin-top: 0; }
-                          .value { font-size: 20px; }
-                        hui-graph-header-footer $: |
-                          .container { padding-bottom: 40px; }
+                      style: |
+                        ha-card {
+                          background: transparent;
+                          border: none;
+                          box-shadow: none;
+                        }
           - type: grid
             # Five traffic cards occupy six columns: WAN spans two, each client chart one.
             columns: 6

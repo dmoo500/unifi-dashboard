@@ -60,7 +60,8 @@ nodes = []
 walk(dashboard) do |node|
   nodes << node
   if node.key?("type")
-    check(native_types.include?(node["type"]), "Non-native type: #{node['type']}")
+    check(native_types.include?(node["type"]) || node["type"] == "custom:mini-graph-card",
+          "Unexpected card type: #{node['type']}")
   end
   if node.key?("card_mod")
     style = node["card_mod"]["style"]
@@ -76,19 +77,21 @@ router_graphs = router_stack["cards"].drop(1)
 check(router_graphs.map { |card| card["name"] } == ["CPU", "Memory", "Temperature"],
       "Expected three stacked router histories")
 router_graphs.each do |graph|
-  check(graph["type"] == "sensor" && graph["graph"] == "line" &&
-        graph["hours_to_show"] == 24 && graph["detail"] == 2,
-        "Router charts must show detailed 24-hour native line history")
-  styles = graph.fetch("card_mod").fetch("style")
-  css = styles.fetch(".")
-  check(css.include?("states(config.entity)") && css.include?("not is_number(value)") &&
-        css.include?("var(--disabled-text-color)"), "Missing entity-aware unavailable-state guard")
-  check(css.include?("value | float >= 61") && css.include?("value | float >= 31") &&
-        css.include?("var(--error-color)") && css.include?("var(--warning-color)") &&
-        css.include?("var(--success-color)"), "Incorrect current-value color thresholds")
-  check(styles.fetch("hui-graph-header-footer $").include?("padding-bottom: 40px"),
-        "Router sparklines must use compact 40px graph height")
+  check(graph["type"] == "custom:mini-graph-card" &&
+        graph["hours_to_show"] == 24 && graph["points_per_hour"] == 6 &&
+        graph["aggregate_func"] == "avg", "Router charts need 24-hour history with six averages/hour")
+  check(graph["entities"].length == 1, "Each router chart needs exactly one sensor")
+  check(graph["height"] == 40, "Router sparklines must use compact 40px graph height")
+  check(graph["color_thresholds_transition"] == "hard", "Thresholds must not blend between bands")
+  check(graph["color_thresholds"] == [
+    { "value" => 0, "color" => "#43a047" },
+    { "value" => 31, "color" => "#ff9800" },
+    { "value" => 61, "color" => "#f44336" }
+  ], "Incorrect historical color thresholds")
+  check(graph["show"] == { "fill" => "fade", "state" => true }, "Show current state and faded history")
 end
+check(nodes.select { |node| node["type"] == "custom:mini-graph-card" } == router_graphs,
+      "Only the three router histories may use Mini Graph Card")
 
 graphs = rows[1]["cards"]
 check(graphs.length == 5, "Expected WAN plus four compact client graphs")
@@ -167,4 +170,4 @@ check(map["entry_id"] == "REPLACE_WITH_NETWORK_MAP_ENTRY_ID",
 check(map["card_height"] == 600, "Expected a valid numeric map height")
 load_yaml(".github/workflows/validate.yml")
 
-puts "PASS: YAML, native cards, 18 documented entities, stacked router history and optional cards"
+puts "PASS: YAML, native base, three Mini Graph Cards, 18 documented entities and optional cards"

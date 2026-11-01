@@ -1,9 +1,10 @@
 # UniFi Dashboard for Home Assistant
 
-A UniFi-inspired network overview using **native Home Assistant cards** and
-**card-mod for styling**. A wide controller header, a compact traffic row, and
+A UniFi-inspired network overview using **mostly native Home Assistant cards**,
+**Mini Graph Card for three router histories**, and **card-mod for styling**.
+A wide controller header, a compact traffic row, and
 aligned device panels bring back the structure of the original dashboard without
-Bubble Card, Mini Graph Card, Button Card, Stack in Card, or Multiple Entity Row.
+Bubble Card, Button Card, Stack in Card, or Multiple Entity Row.
 
 All dashboard labels and documentation are in English. Home Assistant still
 localizes built-in states and dialogs according to your profile language.
@@ -35,18 +36,18 @@ the header and device rows stack below 700px.
 Cards use theme-provided backgrounds/text, subtle borders, 8px corners, blue
 and orange graph accents, and no forced dark theme. There are no external images.
 
-**Native design limits:** router values use three stacked 24-hour line graphs
-with current values, not the original Bubble progress bars. Each entire line
-uses green/yellow/red according to the **current** value, not the historical
-value of each segment. Missing/non-numeric current states use a neutral color.
+**Design limits:** router values use three stacked 24-hour Mini Graph Card
+histories with current values, not the original Bubble progress bars. Historical
+curves use green/orange/red value bands with hard color transitions. There are
+**no horizontal threshold lines** in this variant.
 Native sensor graphs show a current value and history;
-the WAN graph retains native axes and legend. These are not pixel-identical to
-Mini Graph Card. Styling does not replace the charts or hide missing data.
+the WAN graph retains native axes and legend. The traffic row remains native
+and is not pixel-identical to Mini Graph Card. No fake readings are supplied.
 
 ## Features
 
-- CPU, memory, and CPU temperature as stacked 24-hour native line graphs,
-  with current-value warning colors and compact 40px sparklines.
+- CPU, memory, and CPU temperature as stacked 24-hour Mini Graph Card histories,
+  with historical value-based colors and compact 40px sparklines.
 - Current LAN/Wi-Fi/main/guest client counts with seven-day native sensor graphs.
 - Seven-day TX/RX history for the WAN port.
 - Router uptime, Wi-Fi details, and individual client-access switches.
@@ -66,6 +67,8 @@ Replace the example entity IDs before using it.
   HACS or manually according to its instructions. Its support for styling native
   grid cards without `ha-card` is needed here. Choose a compatible Home Assistant/
   card-mod version pair from the project's compatibility table.
+- [Mini Graph Card](https://github.com/kalkih/mini-graph-card), installed through
+  HACS or manually following its instructions, for CPU/memory/temperature only.
 - A modern browser or Companion App WebView supporting CSS container queries.
 - The required sensors, trackers, switches, and update entity. Some are disabled
   by default or only available on certain hardware.
@@ -73,11 +76,12 @@ Replace the example entity IDs before using it.
   exclude them from Recorder. Native sensor graphs require recorded history;
   the WAN history graph may backfill older data from suitable long-term statistics.
 
-Only **one frontend dependency** is needed for the base design: card-mod.
-Without it the native cards still work, but the responsive styling, wide WAN/
-offline cards, and combined header are lost. Remove all `card_mod` blocks if you
-want an entirely dependency-free version; adjust native grid columns for your
-screen yourself.
+The base design needs **two frontend dependencies**: card-mod and Mini Graph Card.
+Without card-mod the cards still render, but the responsive styling, wide WAN/
+offline cards, and combined header are lost. Without Mini Graph Card the three
+router histories cannot render. For a dependency-free adaptation, replace those
+three cards with native sensor cards (without historical threshold colors),
+remove `card_mod` blocks, and adjust native grid columns for your screen.
 
 Credentials belong in the integration, **never in dashboard YAML**. Client access
 and firmware actions require suitable UniFi permissions; monitoring can use
@@ -86,8 +90,8 @@ more restricted access.
 ## Installation
 
 1. Back up your existing dashboard using its **Raw configuration editor**.
-2. Install card-mod. Under **Settings > Dashboards > Resources**, verify that
-   its JavaScript module is registered, following the project's instructions.
+2. Install card-mod and Mini Graph Card. Under **Settings > Dashboards > Resources**,
+   verify that both JavaScript modules are registered, following their instructions.
    HACS normally manages this resource. Reload the browser after installation.
    If using `frontend.extra_module_url`, follow card-mod's guidance and keep its
    URL/version consistent with the dashboard resource to avoid duplicate loading.
@@ -165,17 +169,17 @@ entity, and does not operate the device.
 For example, if your router exposes `sensor.gateway_cpu_usage` in percent, change:
 
 ```yaml
-type: sensor
-entity: sensor.gateway_cpu_usage
+type: custom:mini-graph-card
+entities:
+  - entity: sensor.gateway_cpu_usage
 name: CPU
-graph: line
-detail: 2
+points_per_hour: 6
 hours_to_show: 24
 ```
 
 This is a **partial illustration**, not a complete replacement dashboard.
-Keep the existing chart's `card_mod` styling and color template: it reads
-`config.entity`, so it automatically follows the replacement entity. The new ID is
+Keep the existing chart's `card_mod` styling, `color_thresholds`, and other
+settings. Its history follows the sensor in `entities`. The new ID is
 illustrative; it is not guaranteed to exist in your installation.
 
 In VS Code, use Find/Replace within your local dashboard copy to replace the
@@ -191,7 +195,7 @@ or fewer clients; matching the example's three clients is not required.
 
 | Situation | Safe adaptation |
 | --- | --- |
-| No CPU temperature sensor | Remove that sensor card from the router's vertical stack. Do not substitute a fake zero. |
+| No CPU temperature sensor | Remove that Mini Graph Card from the router's vertical stack. Do not substitute a fake zero. |
 | No guest Wi-Fi | Remove its sensor card **and** its Wi-Fi details row. In the traffic grid change `columns: 6` to `5` to keep the remaining four cards on one desktop row with WAN spanning two columns. |
 | No disconnected-count sensor | Remove only that details row. Do not substitute a tracker or estimate a count from its state. |
 | No client-access switches / insufficient permissions | Remove the Client access card; a tracker is read-only and cannot replace a switch. |
@@ -213,16 +217,18 @@ snippet requires its separate Network Map integration entry.
   **not an internet speed test**. Use sensors with matching units.
 - The temperature chart assumes °C without overriding the entity's unit.
   Convert its warning thresholds if your entity uses °F.
-- Router line colors use the current numeric value: green below 31, yellow from
-  31 up to (but not including) 61, red from 61. Edit the `>= 31` / `>= 61` checks
-  in each chart's `card_mod` template to customize the thresholds, especially
-  temperature. These are example thresholds, not hardware safety guarantees.
-  The entire history is recolored when the current value changes; historical
-  threshold crossings are not individually colored. Unknown, unavailable,
-  and other non-numeric states remain neutral, never a fabricated zero.
+- Router history colors use `color_thresholds`: green from 0, orange from 31,
+  red from 61. Customize these values per chart, especially temperature.
+  `color_thresholds_transition: hard` prevents blended color bands.
+  The color follows the plotted historical value, not just the current state.
+  Six points per hour with `aggregate_func: avg` represent ten-minute averages,
+  not every raw sample: short spikes may be averaged out. These are example
+  thresholds, not hardware safety guarantees. No template turns missing data
+  into zero; verify entity availability separately, since retained history can
+  still exist when the current sensor is unavailable.
 - Router charts retain 24 hours of history; traffic/client charts retain the
   seven-day display period. Both require actual Recorder data. Changing a
-  router chart's `hours_to_show` does not change its current-value color rules.
+  router chart's `hours_to_show` does not change its threshold rules.
 - Wi-Fi counters count **clients**, not access points.
 - Official UniFi client-access switches normally mean **on = access allowed**,
   **off = blocked**. Verify before switching; do not substitute PoE, Wi-Fi, or
@@ -291,8 +297,9 @@ own updates and compatibility; their code is not bundled here.
 
 The screenshot's broad header, traffic row, three-column device panels, and wide
 offline list guide this layout. Native grids and one native vertical stack replace
-the repeated custom stacks. Native stacked sensor/history graphs replace
-Bubble Card and Mini Graph Card; card-mod supplies presentation only.
+the repeated custom stacks. Mini Graph Card is retained only for the three
+router histories to provide historical threshold colors; traffic graphs remain
+native. Bubble Card is removed; card-mod supplies presentation only.
 
 Duplicate uptime rows and the misleading “Access Points” counter label are gone.
 The original “disconnected devices” filter did not test for an offline state;
@@ -308,15 +315,15 @@ From the repository directory:
 ruby tests/validate.rb
 ```
 
-This uses Ruby's standard library to check YAML syntax, duplicate keys, native
+This uses Ruby's standard library to check YAML syntax, duplicate keys, allowed
 card types, the full-width layout and responsive-style rules, entity documentation,
-router warning templates and 24-hour histories, seven-day traffic graphs, safe
+router threshold bands and 24-hour histories, seven-day traffic graphs, safe
 firmware actions, and optional filters.
 GitHub Actions runs the same checks.
 
 These are **static configuration checks, not live Home Assistant or visual tests**.
 Without access to a real installation, entity availability, units, permissions,
-chart rendering, and card-mod application cannot be verified.
+chart rendering, Mini Graph Card loading, and card-mod application cannot be verified.
 
 ### Home Assistant checklist
 
@@ -325,6 +332,8 @@ chart rendering, and card-mod application cannot be verified.
 - If panels look unstyled or stay in six narrow columns, check card-mod loading
   and browser container-query support; refresh the frontend cache if needed.
 - CPU/memory/temperature: real values, correct units, suitable warning thresholds.
+- Router histories: historical bands change at configured values, not according
+  to the latest value alone. No horizontal threshold lines are expected.
 - History: enough retained data, correct WAN port, correct TX/RX mapping.
 - Access switches: check direction with a noncritical test device; never block
   your own management access.
