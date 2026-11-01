@@ -1,0 +1,3 @@
+type: custom:unifi-network-map
+entry_id: REPLACE_WITH_NETWORK_MAP_ENTRY_ID
+card_height: 600

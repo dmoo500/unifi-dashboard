@@ -1,0 +1,19 @@
+type: custom:auto-entities
+card:
+  type: entities
+  title: Offline-Clients (UniFi)
+  show_header_toggle: false
+show_empty: true
+unique: true
+filter:
+  include:
+    - integration: unifi
+      domain: device_tracker
+      state: not_home
+      attributes:
+        source_type: router
+      options:
+        secondary_info: last-changed
+sort:
+  method: name
+  ignore_case: true

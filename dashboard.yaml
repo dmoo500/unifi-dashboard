@@ -1,0 +1,165 @@
+title: UniFi
+views:
+  - title: Netzwerk
+    path: unifi
+    icon: mdi:lan
+    type: sections
+    max_columns: 3
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Router
+            icon: mdi:router-network
+          - type: gauge
+            entity: sensor.dream_router_cpu_utilization
+            name: CPU
+            min: 0
+            max: 100
+            needle: true
+            severity:
+              green: 0
+              yellow: 31
+              red: 61
+            grid_options:
+              columns: 6
+          - type: gauge
+            entity: sensor.dream_router_memory_utilization
+            name: RAM
+            min: 0
+            max: 100
+            needle: true
+            severity:
+              green: 0
+              yellow: 31
+              red: 61
+            grid_options:
+              columns: 6
+          - type: gauge
+            entity: sensor.dream_router_dream_router_cpu_temperature
+            name: CPU-Temperatur
+            min: 0
+            max: 100
+            needle: true
+            severity:
+              green: 0
+              yellow: 31
+              red: 61
+            grid_options:
+              columns: 6
+          - type: tile
+            entity: sensor.dream_router_uptime
+            name: Laufzeit
+            icon: mdi:clock-outline
+            grid_options:
+              columns: 6
+          - type: tile
+            entity: update.dream_router
+            name: Firmware
+            tap_action:
+              action: more-info
+            icon_tap_action:
+              action: more-info
+            grid_options:
+              columns: 12
+      - type: grid
+        cards:
+          - type: heading
+            heading: Netzwerk
+            icon: mdi:lan
+          - type: tile
+            entity: sensor.dream_router_connected_lan_clients
+            name: LAN-Clients
+            icon: mdi:lan
+            grid_options:
+              columns: 6
+          - type: tile
+            entity: sensor.dream_router_wlan_users
+            name: WLAN-Clients
+            icon: mdi:wifi
+            grid_options:
+              columns: 6
+          - type: history-graph
+            title: WAN-Datenrate · 7 Tage
+            hours_to_show: 168
+            entities:
+              - entity: sensor.dream_router_port_5_tx
+                name: Port 5 TX
+              - entity: sensor.dream_router_port_5_rx
+                name: Port 5 RX
+          - type: history-graph
+            title: Verbundene Clients · 7 Tage
+            hours_to_show: 168
+            entities:
+              - entity: sensor.dream_router_connected_lan_clients
+                name: LAN
+              - entity: sensor.dream_router_wlan_users
+                name: WLAN
+      - type: grid
+        cards:
+          - type: heading
+            heading: WLAN
+            icon: mdi:access-point-network
+          - type: entities
+            title: Clients je WLAN
+            show_header_toggle: false
+            entities:
+              - entity: sensor.wlan_main_clients
+                name: Haupt-WLAN
+                icon: mdi:wifi
+              - entity: sensor.wlan_guest_clients
+                name: Gast-WLAN
+                icon: mdi:wifi
+              - entity: sensor.wlan_main_disconnected_clients
+                name: Haupt-WLAN getrennte Clients
+                icon: mdi:wifi-off
+          - type: history-graph
+            title: WLAN-Clients · 7 Tage
+            hours_to_show: 168
+            entities:
+              - entity: sensor.wlan_main_clients
+                name: Haupt-WLAN
+              - entity: sensor.wlan_guest_clients
+                name: Gast-WLAN
+      - type: grid
+        cards:
+          - type: heading
+            heading: Netzwerkzugriff
+            icon: mdi:shield-lock-outline
+          - type: entities
+            title: Client-Zugriff
+            show_header_toggle: false
+            entities:
+              - entity: switch.client_1
+                name: Client 1
+                secondary_info: last-changed
+              - entity: switch.client_2
+                name: Client 2
+                secondary_info: last-changed
+              - entity: switch.client_3
+                name: Client 3
+                secondary_info: last-changed
+      - type: grid
+        cards:
+          - type: heading
+            heading: Offline-Clients
+            icon: mdi:lan-disconnect
+          - type: entity-filter
+            entities:
+              - entity: device_tracker.client_1
+                name: Client 1
+                secondary_info: last-changed
+              - entity: device_tracker.client_2
+                name: Client 2
+                secondary_info: last-changed
+              - entity: device_tracker.client_3
+                name: Client 3
+                secondary_info: last-changed
+            conditions:
+              - condition: state
+                state: not_home
+            show_empty: true
+            card:
+              type: entities
+              title: Nicht im Netzwerk
+              show_header_toggle: false
